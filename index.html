@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>لعبة XO — الكمبيوتر ما كيخسرش</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Changa:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#e9f0e7;
+    --bg-deep:#dcead9;
+    --surface:#fffdf6;
+    --surface-2:#f3efe1;
+    --ink:#14231d;
+    --ink-soft:#43564d;
+    --line:#c9d4c2;
+    --x:#d9481f;
+    --x-bg:#fdeee7;
+    --o:#0d7a6f;
+    --o-bg:#e2f3f0;
+    --gold:#b97f0e;
+    --gold-bg:#fdf3d3;
+    --gold-line:#e5c558;
+    --btn:#14231d;
+    --btn-ink:#fffdf6;
+    --shadow:0 18px 40px rgba(20,35,29,.16);
+    --cell-shadow:0 4px 0 rgba(20,35,29,.14);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d1a15;
+      --bg-deep:#0a140f;
+      --surface:#16261f;
+      --surface-2:#1c2f27;
+      --ink:#eef4ea;
+      --ink-soft:#a9bcb0;
+      --line:#2c4438;
+      --x:#ff7a52;
+      --x-bg:#3a211a;
+      --o:#3ec9b8;
+      --o-bg:#12332e;
+      --gold:#f0c24d;
+      --gold-bg:#33290f;
+      --gold-line:#8a6d1f;
+      --btn:#eef4ea;
+      --btn-ink:#14231d;
+      --shadow:0 18px 40px rgba(0,0,0,.45);
+      --cell-shadow:0 4px 0 rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"Cairo",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+    background:
+      radial-gradient(900px 500px at 85% -10%, var(--bg-deep), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:20px 16px 48px}
+
+  /* ---------- Header ---------- */
+  header.top{text-align:center;padding:10px 0 4px}
+  .game-mark{
+    display:inline-flex;gap:6px;align-items:center;justify-content:center;
+    font-family:"Changa",sans-serif;font-weight:800;font-size:15px;letter-spacing:.5px;
+    color:var(--ink-soft);
+  }
+  .game-mark .mx{color:var(--x)} .game-mark .mo{color:var(--o)}
+  h1{
+    font-family:"Changa",sans-serif;font-weight:800;
+    font-size:clamp(44px,11vw,64px);line-height:1.05;margin:6px 0 4px;
+  }
+  h1 .hx{color:var(--x)} h1 .ho{color:var(--o)}
+  .tagline{margin:0;color:var(--ink-soft);font-size:17px;font-weight:600}
+  .tagline strong{color:var(--ink)}
+
+  /* ---------- $100 challenge banner ---------- */
+  .challenge{
+    margin:20px 0 16px;background:var(--gold-bg);
+    border:2px dashed var(--gold-line);border-radius:14px;
+    padding:14px 16px;display:flex;gap:14px;align-items:center;
+  }
+  .challenge .prize{
+    font-family:"Changa",sans-serif;font-weight:800;font-size:34px;line-height:1;
+    color:var(--gold);white-space:nowrap;
+  }
+  .challenge p{margin:0;font-size:16px;font-weight:700;line-height:1.6}
+  .challenge p span{display:block;font-size:13.5px;font-weight:600;color:var(--ink-soft)}
+
+  /* ---------- Scoreboard ---------- */
+  .scoreboard{
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:0 0 14px;
+  }
+  .score{
+    background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:10px 6px;text-align:center;
+  }
+  .score .who{font-size:13.5px;font-weight:700;color:var(--ink-soft)}
+  .score .who b{font-family:"Changa",sans-serif;font-size:15px}
+  .score .num{font-family:"Changa",sans-serif;font-weight:800;font-size:32px;line-height:1.1}
+  .score.you .num,.score.you .who b{color:var(--x)}
+  .score.cpu .num,.score.cpu .who b{color:var(--o)}
+  .score.draw .num{color:var(--gold)}
+
+  /* ---------- Status ---------- */
+  .status{
+    min-height:52px;display:flex;align-items:center;justify-content:center;text-align:center;
+    font-size:18px;font-weight:800;padding:6px 10px;
+  }
+  .status .dot{
+    display:inline-block;width:10px;height:10px;border-radius:50%;margin-inline-end:8px;
+    background:var(--o);flex:none;
+  }
+  .status.thinking .dot{background:var(--gold);animation:pulse 0.7s ease-in-out infinite alternate}
+  @keyframes pulse{from{transform:scale(.7);opacity:.5}to{transform:scale(1.15);opacity:1}}
+  @media (prefers-reduced-motion: reduce){ .status.thinking .dot{animation:none} }
+
+  /* ---------- Board ---------- */
+  .board-card{
+    background:var(--surface);border:1px solid var(--line);border-radius:20px;
+    box-shadow:var(--shadow);padding:16px;
+  }
+  .board{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;direction:ltr;
+  }
+  .cell{
+    aspect-ratio:1/1;border:2px solid var(--line);border-radius:14px;
+    background:var(--surface-2);box-shadow:var(--cell-shadow);
+    font-family:"Changa",sans-serif;font-weight:800;
+    font-size:clamp(44px,13vw,64px);line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;color:var(--ink);padding:0;
+    transition:transform .08s ease, background .15s ease;
+  }
+  .cell:not(:disabled):hover{transform:translateY(-2px)}
+  .cell:not(:disabled):active{transform:translateY(1px)}
+  .cell:disabled{cursor:default}
+  .cell.x{color:var(--x);background:var(--x-bg);border-color:var(--x)}
+  .cell.o{color:var(--o);background:var(--o-bg);border-color:var(--o)}
+  .cell.win{outline:3px solid var(--gold);outline-offset:2px}
+  .cell.pop{animation:pop .22s ease}
+  @keyframes pop{0%{transform:scale(.6)}70%{transform:scale(1.12)}100%{transform:scale(1)}}
+  @media (prefers-reduced-motion: reduce){ .cell.pop{animation:none} .cell{transition:none} }
+
+  /* ---------- Controls ---------- */
+  .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .btn{
+    flex:1 1 150px;border-radius:12px;border:2px solid var(--btn);
+    background:var(--btn);color:var(--btn-ink);
+    font-family:inherit;font-size:16px;font-weight:800;
+    padding:12px 14px;cursor:pointer;min-height:50px;
+  }
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+  .btn:active{transform:translateY(1px)}
+  .starter{margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .starter .lbl{font-size:14.5px;font-weight:700;color:var(--ink-soft)}
+  .seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+  .seg button{
+    border:0;background:transparent;color:var(--ink-soft);font-family:inherit;
+    font-size:14px;font-weight:800;padding:7px 14px;border-radius:999px;cursor:pointer;
+  }
+  .seg button[aria-pressed="true"]{background:var(--btn);color:var(--btn-ink)}
+
+  .how{
+    margin-top:18px;background:var(--surface);border:1px solid var(--line);
+    border-radius:14px;padding:14px 16px;font-size:15px;line-height:1.9;color:var(--ink-soft);
+  }
+  .how strong{color:var(--ink)}
+  .attempts{margin-top:10px;text-align:center;font-size:14px;font-weight:700;color:var(--ink-soft)}
+  .attempts b{color:var(--gold);font-family:"Changa",sans-serif;font-size:17px}
+
+  /* ---------- Developer button ---------- */
+  .dev-fab{
+    position:fixed;bottom:18px;inset-inline-start:18px;z-index:40;
+    display:inline-flex;align-items:center;gap:9px;
+    background:var(--btn);color:var(--btn-ink);border:0;border-radius:999px;
+    padding:12px 18px 12px 14px;font-family:inherit;font-size:15.5px;font-weight:800;
+    cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.28);min-height:50px;
+  }
+  .dev-fab svg{width:22px;height:22px;flex:none}
+  .dev-fab:active{transform:translateY(1px)}
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed;inset:0;z-index:50;background:rgba(8,15,12,.62);
+    display:none;align-items:flex-end;justify-content:center;padding:0;
+  }
+  .overlay.open{display:flex}
+  .modal{
+    background:var(--surface);color:var(--ink);width:100%;max-width:520px;
+    max-height:88vh;overflow-y:auto;border-radius:22px 22px 0 0;
+    padding:22px 20px 28px;box-shadow:var(--shadow);
+  }
+  @media (min-width:640px){
+    .overlay{align-items:center;padding:20px}
+    .modal{border-radius:22px}
+  }
+  .modal-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:6px}
+  .avatar{
+    width:64px;height:64px;border-radius:50%;flex:none;
+    background:var(--o-bg);border:2px solid var(--o);
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Changa",sans-serif;font-weight:800;font-size:30px;color:var(--o);
+  }
+  .modal-head h2{margin:0;font-family:"Changa",sans-serif;font-size:26px;font-weight:800;line-height:1.2}
+  .modal-head .role{margin:2px 0 0;color:var(--o);font-weight:800;font-size:15px}
+  .close-btn{
+    margin-inline-start:auto;border:1px solid var(--line);background:var(--surface-2);
+    color:var(--ink);width:40px;height:40px;border-radius:50%;flex:none;
+    font-size:20px;line-height:1;cursor:pointer;font-family:inherit;
+  }
+  .facts{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:10px}
+  .facts li{
+    display:flex;gap:12px;align-items:flex-start;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
+    padding:12px 14px;font-size:15.5px;line-height:1.75;
+  }
+  .facts li svg{width:22px;height:22px;flex:none;margin-top:3px;color:var(--o)}
+  .facts li strong{color:var(--ink)}
+  .facts a{color:var(--o);font-weight:800}
+  .modal .sign{margin:16px 2px 0;font-size:14.5px;color:var(--ink-soft);font-weight:600;line-height:1.8}
+
+  canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:60;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="game-mark" aria-hidden="true"><span class="mx">X</span> ✕ <span class="mo">O</span> · TIC-TAC-TOE</div>
+    <h1>لعبة <span class="hx">X</span><span class="ho">O</span></h1>
+    <p class="tagline">نتا كتلعب بـ <strong>X</strong>، والكمبيوتر بـ <strong>O</strong>… والكمبيوتر <strong>ما كيخسرش أبداً</strong>.</p>
+  </header>
+
+  <div class="challenge" role="note">
+    <div class="prize">$100</div>
+    <p>إلا قدرتي تربح الكمبيوتر، عندك 100$!
+      <span>المشكل: الكمبيوتر كيحسب كل حركة قبل ما يلعبها، فالربح عليه مستحيل — جرّب بنفسك.</span>
+    </p>
+  </div>
+
+  <div class="scoreboard" aria-label="النتيجة">
+    <div class="score you">
+      <div class="who">نتا <b>X</b></div>
+      <div class="num" id="scoreYou">0</div>
+    </div>
+    <div class="score draw">
+      <div class="who">تعادل</div>
+      <div class="num" id="scoreDraw">0</div>
+    </div>
+    <div class="score cpu">
+      <div class="who">الكمبيوتر <b>O</b></div>
+      <div class="num" id="scoreCpu">0</div>
+    </div>
+  </div>
+
+  <div class="board-card">
+    <div class="status" id="status" role="status" aria-live="polite"><span class="dot"></span><span id="statusText">دورك — لعب بـ X</span></div>
+    <div class="board" id="board" role="grid" aria-label="لوحة اللعب"></div>
+    <div class="controls">
+      <button class="btn" id="newRound" type="button">جولة جديدة</button>
+      <button class="btn ghost" id="resetScore" type="button">تصفير النقاط</button>
+    </div>
+    <div class="starter">
+      <span class="lbl">شكون يبدا؟</span>
+      <div class="seg" role="group" aria-label="اختيار من يبدأ">
+        <button type="button" id="startYou" aria-pressed="true">أنا نبدا</button>
+        <button type="button" id="startCpu" aria-pressed="false">الكمبيوتر يبدا</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="how">
+    <strong>كيفاش خدام الكمبيوتر؟</strong><br />
+    قبل ما يلعب أي حركة، كيجرّب فعقلو كل الاحتمالات حتى لآخر الجولة (خوارزمية Minimax) وكيختار الحركة اللي ما تخليهش يخسر. النتيجة دائماً: إما <strong>يربح هو</strong>، إما <strong>تعادل</strong>. أحسن حاجة تقدر توصل ليها هي التعادل!
+  </div>
+
+  <p class="attempts">عدد المحاولات ضد الكمبيوتر: <b id="attempts">0</b> · مرات ربحتي: <b id="winsCount">0</b></p>
+
+</div>
+
+<!-- Developer button -->
+<button class="dev-fab" id="devBtn" type="button" aria-haspopup="dialog">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+  المطوّر
+</button>
+
+<!-- Developer modal -->
+<div class="overlay" id="devOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="devTitle">
+    <div class="modal-head">
+      <div class="avatar" aria-hidden="true">ع</div>
+      <div>
+        <h2 id="devTitle">عمر العنكوري</h2>
+        <p class="role">مطوّر هاد اللعبة · Omar El Ankouri</p>
+      </div>
+      <button class="close-btn" id="devClose" type="button" aria-label="سدّ النافذة">✕</button>
+    </div>
+    <ul class="facts">
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span><strong>منين؟</strong> عمر من مدينة <strong>مكناس، المغرب</strong>.</span>
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>
+        <span><strong>الدراسة:</strong> كيقرا فـ<strong>ثانوية عين كرمة التأهيلية</strong> بمكناس — السنة الثانية، شعبة الآداب والعلوم الإنسانية (2026-2027).</span>
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4a2 2 0 0 0-2-2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>
+        <span><strong>مشروعو:</strong> عندو متجر <a href="https://payhip.com/BusyBooksPrintables" target="_blank" rel="noopener">Busy Books &amp; Printables</a> على Payhip — كتب أنشطة أصلية للأطفال من 3 حتى 6 سنوات (الأشكال، الأرقام، الألوان، الحروف، الديناصورات، المحيط…).</span>
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        <span><strong>الخدمة الحرة:</strong> كيخدم فالـ freelancing — كتابة وصف المنتجات للمتاجر الإلكترونية وإدارة حسابات التواصل الاجتماعي، وكيبني مشاريعو الرقمية خطوة بخطوة.</span>
+      </li>
+    </ul>
+    <p class="sign">هاد اللعبة صايبها عمر باش يتحداك: الكمبيوتر ديالو ما كيخسرش… إلا ربحتيه، الـ100$ تستاهلها!</p>
+  </div>
+</div>
+
+<canvas id="confetti" width="800" height="600" aria-hidden="true"></canvas>
+
+<script>
+(function(){
+  "use strict";
+  var LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  var HUMAN = "X", CPU = "O";
+  var board, gameOver, starter, scores = {you:0, draw:0, cpu:0}, attempts = 0, playerWins = 0;
+  var cpuTimer = null;
+
+  var boardEl = document.getElementById("board");
+  var statusEl = document.getElementById("status");
+  var statusText = document.getElementById("statusText");
+  var cells = [];
+
+  for (var i = 0; i < 9; i++){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "cell";
+    b.setAttribute("role","gridcell");
+    b.dataset.index = i;
+    b.setAttribute("aria-label", "خانة " + (i+1));
+    b.addEventListener("click", onCellClick);
+    boardEl.appendChild(b);
+    cells.push(b);
+  }
+
+  function winnerOf(bd){
+    for (var k = 0; k < LINES.length; k++){
+      var L = LINES[k];
+      if (bd[L[0]] && bd[L[0]] === bd[L[1]] && bd[L[1]] === bd[L[2]]){
+        return {mark: bd[L[0]], line: L};
+      }
+    }
+    return null;
+  }
+  function isFull(bd){ return bd.every(function(c){ return c !== ""; }); }
+
+  function minimax(bd, isMax, depth){
+    var w = winnerOf(bd);
+    if (w) return w.mark === CPU ? 10 - depth : depth - 10;
+    if (isFull(bd)) return 0;
+    var best = isMax ? -Infinity : Infinity;
+    for (var i = 0; i < 9; i++){
+      if (bd[i] === ""){
+        bd[i] = isMax ? CPU : HUMAN;
+        var s = minimax(bd, !isMax, depth + 1);
+        bd[i] = "";
+        best = isMax ? Math.max(best, s) : Math.min(best, s);
+      }
+    }
+    return best;
+  }
+  function bestMove(){
+    var bestScore = -Infinity, move = -1;
+    for (var i = 0; i < 9; i++){
+      if (board[i] === ""){
+        board[i] = CPU;
+        var s = minimax(board, false, 0);
+        board[i] = "";
+        if (s > bestScore){ bestScore = s; move = i; }
+      }
+    }
+    return move;
+  }
+
+  function setStatus(msg, thinking){
+    statusText.textContent = msg;
+    statusEl.classList.toggle("thinking", !!thinking);
+  }
+  function render(popIndex){
+    for (var i = 0; i < 9; i++){
+      var c = cells[i];
+      c.textContent = board[i];
+      c.className = "cell" + (board[i] === "X" ? " x" : board[i] === "O" ? " o" : "") + (i === popIndex ? " pop" : "");
+      c.disabled = gameOver || board[i] !== "";
+    }
+    document.getElementById("scoreYou").textContent = scores.you;
+    document.getElementById("scoreDraw").textContent = scores.draw;
+    document.getElementById("scoreCpu").textContent = scores.cpu;
+    document.getElementById("attempts").textContent = attempts;
+    document.getElementById("winsCount").textContent = playerWins;
+  }
+  function highlight(line){
+    line.forEach(function(idx){ cells[idx].classList.add("win"); });
+  }
+
+  function finishIfDone(){
+    var w = winnerOf(board);
+    if (w){
+      gameOver = true;
+      highlight(w.line);
+      if (w.mark === HUMAN){
+        scores.you++; playerWins++;
+        setStatus("مستحيييل! ربحتي الكمبيوتر — الـ100$ ديالك!", false);
+        render(-1); launchConfetti();
+      } else {
+        scores.cpu++;
+        setStatus("ربح الكمبيوتر! الـ100$ مازال بعيدة… عاود المحاولة", false);
+        render(-1);
+      }
+      return true;
+    }
+    if (isFull(board)){
+      gameOver = true;
+      scores.draw++;
+      setStatus("تعادل! ما ربحتيش الـ100$، ولكن صمدتي — هادا أحسن ما يمكن", false);
+      render(-1);
+      return true;
+    }
+    return false;
+  }
+
+  function cpuPlay(){
+    if (gameOver) return;
+    setStatus("الكمبيوتر كيفكّر…", true);
+    cpuTimer = setTimeout(function(){
+      var m = bestMove();
+      if (m >= 0){
+        board[m] = CPU;
+        render(m);
+      }
+      if (!finishIfDone()) setStatus("دورك — لعب بـ X", false);
+    }, 420);
+  }
+
+  function onCellClick(e){
+    var idx = Number(e.currentTarget.dataset.index);
+    if (gameOver || board[idx] !== "") return;
+    board[idx] = HUMAN;
+    render(idx);
+    if (!finishIfDone()) cpuPlay();
+  }
+
+  function newRound(){
+    if (cpuTimer){ clearTimeout(cpuTimer); cpuTimer = null; }
+    board = ["","","","","","","","",""];
+    gameOver = false;
+    attempts++;
+    cells.forEach(function(c){ c.classList.remove("win"); });
+    render(-1);
+    if (starter === CPU){
+      setStatus("الكمبيوتر غادي يبدا…", true);
+      cpuPlay();
+    } else {
+      setStatus("دورك — لعب بـ X", false);
+    }
+  }
+
+  /* starter toggle */
+  var startYou = document.getElementById("startYou");
+  var startCpu = document.getElementById("startCpu");
+  starter = HUMAN;
+  function setStarter(who){
+    starter = who;
+    startYou.setAttribute("aria-pressed", who === HUMAN ? "true" : "false");
+    startCpu.setAttribute("aria-pressed", who === CPU ? "true" : "false");
+    newRound();
+  }
+  startYou.addEventListener("click", function(){ setStarter(HUMAN); });
+  startCpu.addEventListener("click", function(){ setStarter(CPU); });
+
+  document.getElementById("newRound").addEventListener("click", newRound);
+  document.getElementById("resetScore").addEventListener("click", function(){
+    scores = {you:0, draw:0, cpu:0}; attempts = 0; playerWins = 0;
+    newRound();
+  });
+
+  /* ---------- Developer modal ---------- */
+  var overlay = document.getElementById("devOverlay");
+  var devBtn = document.getElementById("devBtn");
+  var devClose = document.getElementById("devClose");
+  function openDev(){ overlay.classList.add("open"); devClose.focus(); }
+  function closeDev(){ overlay.classList.remove("open"); devBtn.focus(); }
+  devBtn.addEventListener("click", openDev);
+  devClose.addEventListener("click", closeDev);
+  overlay.addEventListener("click", function(e){ if (e.target === overlay) closeDev(); });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && overlay.classList.contains("open")) closeDev(); });
+
+  /* ---------- Confetti (only reachable if the impossible happens) ---------- */
+  function launchConfetti(){
+    var cv = document.getElementById("confetti");
+    var ctx = cv.getContext("2d");
+    cv.width = window.innerWidth; cv.height = window.innerHeight;
+    cv.style.display = "block";
+    var colors = ["#d9481f","#0d7a6f","#b97f0e","#14231d"];
+    var parts = [];
+    for (var i = 0; i < 140; i++){
+      parts.push({x: Math.random()*cv.width, y: -20 - Math.random()*cv.height*0.4,
+        w: 6+Math.random()*7, h: 8+Math.random()*8, vy: 2+Math.random()*3.2,
+        vx: -1+Math.random()*2, r: Math.random()*Math.PI, vr: -0.1+Math.random()*0.2,
+        c: colors[i % colors.length]});
+    }
+    var start = null;
+    function frame(ts){
+      if (!start) start = ts;
+      ctx.clearRect(0,0,cv.width,cv.height);
+      parts.forEach(function(p){
+        p.x += p.vx; p.y += p.vy; p.r += p.vr;
+        ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+      });
+      if (ts - start < 3200) requestAnimationFrame(frame);
+      else { cv.style.display = "none"; ctx.clearRect(0,0,cv.width,cv.height); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  newRound();
+})();
+</script>
+</body>
+</html>
