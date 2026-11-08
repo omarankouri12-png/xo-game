@@ -333,7 +333,7 @@
   var LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
   var HUMAN = "X", CPU = "O";
   var board, gameOver, starter, scores = {you:0, draw:0, cpu:0}, attempts = 0, playerWins = 0;
-  var cpuTimer = null;
+  var cpuTimer = null, cpuThinking = false;
 
   var boardEl = document.getElementById("board");
   var statusEl = document.getElementById("status");
@@ -400,7 +400,7 @@
       var c = cells[i];
       c.textContent = board[i];
       c.className = "cell" + (board[i] === "X" ? " x" : board[i] === "O" ? " o" : "") + (i === popIndex ? " pop" : "");
-      c.disabled = gameOver || board[i] !== "";
+      c.disabled = gameOver || cpuThinking || board[i] !== "";
     }
     document.getElementById("scoreYou").textContent = scores.you;
     document.getElementById("scoreDraw").textContent = scores.draw;
@@ -440,8 +440,11 @@
 
   function cpuPlay(){
     if (gameOver) return;
+    cpuThinking = true;
+    render(-1);
     setStatus("الكمبيوتر كيفكّر…", true);
     cpuTimer = setTimeout(function(){
+      cpuThinking = false;
       var m = bestMove();
       if (m >= 0){
         board[m] = CPU;
@@ -453,7 +456,7 @@
 
   function onCellClick(e){
     var idx = Number(e.currentTarget.dataset.index);
-    if (gameOver || board[idx] !== "") return;
+    if (gameOver || cpuThinking || board[idx] !== "") return;
     board[idx] = HUMAN;
     render(idx);
     if (!finishIfDone()) cpuPlay();
@@ -461,6 +464,7 @@
 
   function newRound(){
     if (cpuTimer){ clearTimeout(cpuTimer); cpuTimer = null; }
+    cpuThinking = false;
     board = ["","","","","","","","",""];
     gameOver = false;
     attempts++;
